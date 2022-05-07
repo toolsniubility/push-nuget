@@ -1,13 +1,97 @@
-name: 'Wait'
-description: 'Wait a designated number of milliseconds'
+name: push to NuGet
+author: Jimbo forked from Rohith Reddy (@rohith)
+description: Build, Pack & Publish a NuGet package with dotnet core on project version change
+
 inputs:
-  milliseconds:  # id of input
-    description: 'number of milliseconds to wait'
-    required: true
-    default: '1000'
+    PROJECT_FILE_PATH:
+        description: Filepath of the project to be packaged, relative to root of repository
+        required: true
+    PACKAGE_NAME:
+        description: NuGet package id, used for version detection & defaults to project name
+        required: false
+    # Version Extraction
+    VERSION_FILE_PATH:
+        description: Filepath with version info, relative to root of repository & defaults to PROJECT_FILE_PATH
+        required: false
+    VERSION_REGEX:
+        description: Regex pattern to extract version info in a capturing group
+        required: false
+        default: ^\s*<Version>(.*)<\/Version>\s*$
+    VERSION_STATIC:
+        description: Useful with external providers like Nerdbank.GitVersioning, ignores VERSION_FILE_PATH & VERSION_REGEX
+        required: false
+    VERSION_STATIC_PREFIX:
+        description: Useful with external providers like Nerdbank.GitVersioning, ignores VERSION_FILE_PATH & VERSION_REGEX
+        required: false
+    VERSION_STATIC_SUFFIX:
+        description: Useful with external providers like Nerdbank.GitVersioning, ignores VERSION_FILE_PATH & VERSION_REGEX
+        required: false
+    ASSEMBLY_VERSION:
+        description: Useful with external providers like Nerdbank.GitVersioning, ignores VERSION_FILE_PATH & VERSION_REGEX
+        required: false
+    FILE_VERSION:
+        description: Useful with external providers like Nerdbank.GitVersioning, ignores VERSION_FILE_PATH & VERSION_REGEX
+        required: false
+    PACKAGE_VERSION:
+        description: Useful with external providers like Nerdbank.GitVersioning, ignores VERSION_FILE_PATH & VERSION_REGEX
+        required: false
+    TAG_COMMIT:
+        description: Flag to toggle git tagging, enabled by default
+        required: false
+        default: 'true'
+    TAG_FORMAT:
+        description: Format of the git tag, [*] gets replaced with actual version
+        required: false
+        default: v*
+    NUGET_KEY:
+        description: API key to authenticate with NuGet server
+        required: false
+    NUGET_SOURCE:
+        description: NuGet server uri hosting the packages, https://nuget.pkg.github.com or https://api.nuget.org. defaults to https://api.nuget.org
+        required: false
+        default: https://api.nuget.org
+    INCLUDE_SYMBOLS:
+        description: Flag to toggle pushing symbols along with nuget package to the server, disabled by default
+        required: false
+        default: 'false'
+    ERROR_CONTINUE:
+        description: Flag to set continue the next task when some error happened
+        required: false
+        default: 'false'
+    NO_BUILD:
+        description: Flag to toggle building the project before pack, disabled by default
+        required: false
+        default: 'false'
+    SIGNING_CERT_FILE_NAME:
+        description: Certificate file name (should be in root folder) to sign the package before upload
+        required: false
+    GITHUB_USER:
+        description: Required for packages pushed to Github Package Registry. User allowed to push to repository, defaults to GITHUB_ACTOR (user that triggered the action) 
+        required: false
+    GITHUB_PASSWORD:
+        description: Github password, defaults to  NUGET_KEY
+        required: false
+
 outputs:
-  time: # output will be available to future steps
-    description: 'The current time after waiting'
+    VERSION:
+        description: Version of the associated git tag
+
+    PACKAGE_NAME:
+        description: Name of the NuGet package generated
+
+    PACKAGE_PATH:
+        description: Path to the generated NuGet package
+
+    SYMBOLS_PACKAGE_NAME:
+        description: Name of the symbols package generated
+
+    SYMBOLS_PACKAGE_PATH:
+        description: Path to the generated symbols package
+
 runs:
-  using: 'node16'
-  main: 'dist/index.js'
+    using: node12
+    main: dist/index.js
+
+branding:
+    icon: package
+    color: blue

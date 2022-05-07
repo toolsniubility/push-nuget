@@ -27,7 +27,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.issue = exports.issueCommand = void 0;
-const os = __importStar(__nccwpck_require__(87));
+const os = __importStar(__nccwpck_require__(37));
 const utils_1 = __nccwpck_require__(278);
 /**
  * Commands
@@ -138,8 +138,8 @@ exports.getIDToken = exports.getState = exports.saveState = exports.group = expo
 const command_1 = __nccwpck_require__(351);
 const file_command_1 = __nccwpck_require__(717);
 const utils_1 = __nccwpck_require__(278);
-const os = __importStar(__nccwpck_require__(87));
-const path = __importStar(__nccwpck_require__(622));
+const os = __importStar(__nccwpck_require__(37));
+const path = __importStar(__nccwpck_require__(17));
 const oidc_utils_1 = __nccwpck_require__(41);
 /**
  * The code to exit an action
@@ -415,6 +415,16 @@ function getIDToken(aud) {
     });
 }
 exports.getIDToken = getIDToken;
+/**
+ * Summary exports
+ */
+var summary_1 = __nccwpck_require__(327);
+Object.defineProperty(exports, "summary", ({ enumerable: true, get: function () { return summary_1.summary; } }));
+/**
+ * @deprecated use core.summary
+ */
+var summary_2 = __nccwpck_require__(327);
+Object.defineProperty(exports, "markdownSummary", ({ enumerable: true, get: function () { return summary_2.markdownSummary; } }));
 //# sourceMappingURL=core.js.map
 
 /***/ }),
@@ -448,8 +458,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.issueCommand = void 0;
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const fs = __importStar(__nccwpck_require__(747));
-const os = __importStar(__nccwpck_require__(87));
+const fs = __importStar(__nccwpck_require__(147));
+const os = __importStar(__nccwpck_require__(37));
 const utils_1 = __nccwpck_require__(278);
 function issueCommand(command, message) {
     const filePath = process.env[`GITHUB_${command}`];
@@ -549,6 +559,296 @@ class OidcClient {
 }
 exports.OidcClient = OidcClient;
 //# sourceMappingURL=oidc-utils.js.map
+
+/***/ }),
+
+/***/ 327:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.summary = exports.markdownSummary = exports.SUMMARY_DOCS_URL = exports.SUMMARY_ENV_VAR = void 0;
+const os_1 = __nccwpck_require__(37);
+const fs_1 = __nccwpck_require__(147);
+const { access, appendFile, writeFile } = fs_1.promises;
+exports.SUMMARY_ENV_VAR = 'GITHUB_STEP_SUMMARY';
+exports.SUMMARY_DOCS_URL = 'https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary';
+class Summary {
+    constructor() {
+        this._buffer = '';
+    }
+    /**
+     * Finds the summary file path from the environment, rejects if env var is not found or file does not exist
+     * Also checks r/w permissions.
+     *
+     * @returns step summary file path
+     */
+    filePath() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this._filePath) {
+                return this._filePath;
+            }
+            const pathFromEnv = process.env[exports.SUMMARY_ENV_VAR];
+            if (!pathFromEnv) {
+                throw new Error(`Unable to find environment variable for $${exports.SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
+            }
+            try {
+                yield access(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
+            }
+            catch (_a) {
+                throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
+            }
+            this._filePath = pathFromEnv;
+            return this._filePath;
+        });
+    }
+    /**
+     * Wraps content in an HTML tag, adding any HTML attributes
+     *
+     * @param {string} tag HTML tag to wrap
+     * @param {string | null} content content within the tag
+     * @param {[attribute: string]: string} attrs key-value list of HTML attributes to add
+     *
+     * @returns {string} content wrapped in HTML element
+     */
+    wrap(tag, content, attrs = {}) {
+        const htmlAttrs = Object.entries(attrs)
+            .map(([key, value]) => ` ${key}="${value}"`)
+            .join('');
+        if (!content) {
+            return `<${tag}${htmlAttrs}>`;
+        }
+        return `<${tag}${htmlAttrs}>${content}</${tag}>`;
+    }
+    /**
+     * Writes text in the buffer to the summary buffer file and empties buffer. Will append by default.
+     *
+     * @param {SummaryWriteOptions} [options] (optional) options for write operation
+     *
+     * @returns {Promise<Summary>} summary instance
+     */
+    write(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const overwrite = !!(options === null || options === void 0 ? void 0 : options.overwrite);
+            const filePath = yield this.filePath();
+            const writeFunc = overwrite ? writeFile : appendFile;
+            yield writeFunc(filePath, this._buffer, { encoding: 'utf8' });
+            return this.emptyBuffer();
+        });
+    }
+    /**
+     * Clears the summary buffer and wipes the summary file
+     *
+     * @returns {Summary} summary instance
+     */
+    clear() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.emptyBuffer().write({ overwrite: true });
+        });
+    }
+    /**
+     * Returns the current summary buffer as a string
+     *
+     * @returns {string} string of summary buffer
+     */
+    stringify() {
+        return this._buffer;
+    }
+    /**
+     * If the summary buffer is empty
+     *
+     * @returns {boolen} true if the buffer is empty
+     */
+    isEmptyBuffer() {
+        return this._buffer.length === 0;
+    }
+    /**
+     * Resets the summary buffer without writing to summary file
+     *
+     * @returns {Summary} summary instance
+     */
+    emptyBuffer() {
+        this._buffer = '';
+        return this;
+    }
+    /**
+     * Adds raw text to the summary buffer
+     *
+     * @param {string} text content to add
+     * @param {boolean} [addEOL=false] (optional) append an EOL to the raw text (default: false)
+     *
+     * @returns {Summary} summary instance
+     */
+    addRaw(text, addEOL = false) {
+        this._buffer += text;
+        return addEOL ? this.addEOL() : this;
+    }
+    /**
+     * Adds the operating system-specific end-of-line marker to the buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addEOL() {
+        return this.addRaw(os_1.EOL);
+    }
+    /**
+     * Adds an HTML codeblock to the summary buffer
+     *
+     * @param {string} code content to render within fenced code block
+     * @param {string} lang (optional) language to syntax highlight code
+     *
+     * @returns {Summary} summary instance
+     */
+    addCodeBlock(code, lang) {
+        const attrs = Object.assign({}, (lang && { lang }));
+        const element = this.wrap('pre', this.wrap('code', code), attrs);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML list to the summary buffer
+     *
+     * @param {string[]} items list of items to render
+     * @param {boolean} [ordered=false] (optional) if the rendered list should be ordered or not (default: false)
+     *
+     * @returns {Summary} summary instance
+     */
+    addList(items, ordered = false) {
+        const tag = ordered ? 'ol' : 'ul';
+        const listItems = items.map(item => this.wrap('li', item)).join('');
+        const element = this.wrap(tag, listItems);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML table to the summary buffer
+     *
+     * @param {SummaryTableCell[]} rows table rows
+     *
+     * @returns {Summary} summary instance
+     */
+    addTable(rows) {
+        const tableBody = rows
+            .map(row => {
+            const cells = row
+                .map(cell => {
+                if (typeof cell === 'string') {
+                    return this.wrap('td', cell);
+                }
+                const { header, data, colspan, rowspan } = cell;
+                const tag = header ? 'th' : 'td';
+                const attrs = Object.assign(Object.assign({}, (colspan && { colspan })), (rowspan && { rowspan }));
+                return this.wrap(tag, data, attrs);
+            })
+                .join('');
+            return this.wrap('tr', cells);
+        })
+            .join('');
+        const element = this.wrap('table', tableBody);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds a collapsable HTML details element to the summary buffer
+     *
+     * @param {string} label text for the closed state
+     * @param {string} content collapsable content
+     *
+     * @returns {Summary} summary instance
+     */
+    addDetails(label, content) {
+        const element = this.wrap('details', this.wrap('summary', label) + content);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML image tag to the summary buffer
+     *
+     * @param {string} src path to the image you to embed
+     * @param {string} alt text description of the image
+     * @param {SummaryImageOptions} options (optional) addition image attributes
+     *
+     * @returns {Summary} summary instance
+     */
+    addImage(src, alt, options) {
+        const { width, height } = options || {};
+        const attrs = Object.assign(Object.assign({}, (width && { width })), (height && { height }));
+        const element = this.wrap('img', null, Object.assign({ src, alt }, attrs));
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML section heading element
+     *
+     * @param {string} text heading text
+     * @param {number | string} [level=1] (optional) the heading level, default: 1
+     *
+     * @returns {Summary} summary instance
+     */
+    addHeading(text, level) {
+        const tag = `h${level}`;
+        const allowedTag = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
+            ? tag
+            : 'h1';
+        const element = this.wrap(allowedTag, text);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML thematic break (<hr>) to the summary buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addSeparator() {
+        const element = this.wrap('hr', null);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML line break (<br>) to the summary buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addBreak() {
+        const element = this.wrap('br', null);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML blockquote to the summary buffer
+     *
+     * @param {string} text quote text
+     * @param {string} cite (optional) citation url
+     *
+     * @returns {Summary} summary instance
+     */
+    addQuote(text, cite) {
+        const attrs = Object.assign({}, (cite && { cite }));
+        const element = this.wrap('blockquote', text, attrs);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML anchor tag to the summary buffer
+     *
+     * @param {string} text link text/content
+     * @param {string} href hyperlink
+     *
+     * @returns {Summary} summary instance
+     */
+    addLink(text, href) {
+        const element = this.wrap('a', text, { href });
+        return this.addRaw(element).addEOL();
+    }
+}
+const _summary = new Summary();
+/**
+ * @deprecated use `core.summary`
+ */
+exports.markdownSummary = _summary;
+exports.summary = _summary;
+//# sourceMappingURL=summary.js.map
 
 /***/ }),
 
@@ -671,8 +971,8 @@ exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHand
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const http = __nccwpck_require__(605);
-const https = __nccwpck_require__(211);
+const http = __nccwpck_require__(685);
+const https = __nccwpck_require__(687);
 const pm = __nccwpck_require__(443);
 let tunnel;
 var HttpCodes;
@@ -1289,13 +1589,13 @@ module.exports = __nccwpck_require__(219);
 "use strict";
 
 
-var net = __nccwpck_require__(631);
-var tls = __nccwpck_require__(16);
-var http = __nccwpck_require__(605);
-var https = __nccwpck_require__(211);
-var events = __nccwpck_require__(614);
-var assert = __nccwpck_require__(357);
-var util = __nccwpck_require__(669);
+var net = __nccwpck_require__(808);
+var tls = __nccwpck_require__(404);
+var http = __nccwpck_require__(685);
+var https = __nccwpck_require__(687);
+var events = __nccwpck_require__(361);
+var assert = __nccwpck_require__(491);
+var util = __nccwpck_require__(837);
 
 
 exports.httpOverHttp = httpOverHttp;
@@ -1555,24 +1855,7 @@ exports.debug = debug; // for test
 
 /***/ }),
 
-/***/ 258:
-/***/ ((module) => {
-
-let wait = function (milliseconds) {
-  return new Promise((resolve) => {
-    if (typeof milliseconds !== 'number') {
-      throw new Error('milliseconds not a number');
-    }
-    setTimeout(() => resolve("done!"), milliseconds)
-  });
-};
-
-module.exports = wait;
-
-
-/***/ }),
-
-/***/ 357:
+/***/ 491:
 /***/ ((module) => {
 
 "use strict";
@@ -1580,7 +1863,15 @@ module.exports = require("assert");
 
 /***/ }),
 
-/***/ 614:
+/***/ 81:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("child_process");
+
+/***/ }),
+
+/***/ 361:
 /***/ ((module) => {
 
 "use strict";
@@ -1588,7 +1879,7 @@ module.exports = require("events");
 
 /***/ }),
 
-/***/ 747:
+/***/ 147:
 /***/ ((module) => {
 
 "use strict";
@@ -1596,7 +1887,7 @@ module.exports = require("fs");
 
 /***/ }),
 
-/***/ 605:
+/***/ 685:
 /***/ ((module) => {
 
 "use strict";
@@ -1604,7 +1895,7 @@ module.exports = require("http");
 
 /***/ }),
 
-/***/ 211:
+/***/ 687:
 /***/ ((module) => {
 
 "use strict";
@@ -1612,7 +1903,7 @@ module.exports = require("https");
 
 /***/ }),
 
-/***/ 631:
+/***/ 808:
 /***/ ((module) => {
 
 "use strict";
@@ -1620,7 +1911,7 @@ module.exports = require("net");
 
 /***/ }),
 
-/***/ 87:
+/***/ 37:
 /***/ ((module) => {
 
 "use strict";
@@ -1628,7 +1919,7 @@ module.exports = require("os");
 
 /***/ }),
 
-/***/ 622:
+/***/ 17:
 /***/ ((module) => {
 
 "use strict";
@@ -1636,7 +1927,7 @@ module.exports = require("path");
 
 /***/ }),
 
-/***/ 16:
+/***/ 404:
 /***/ ((module) => {
 
 "use strict";
@@ -1644,7 +1935,7 @@ module.exports = require("tls");
 
 /***/ }),
 
-/***/ 669:
+/***/ 837:
 /***/ ((module) => {
 
 "use strict";
@@ -1693,27 +1984,210 @@ module.exports = require("util");
 var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
 (() => {
-const core = __nccwpck_require__(186);
-const wait = __nccwpck_require__(258);
+const os = __nccwpck_require__(37),
+  fs = __nccwpck_require__(147),
+  path = __nccwpck_require__(17),
+  https = __nccwpck_require__(687),
+  spawnSync = (__nccwpck_require__(81).spawnSync),
+  core = __nccwpck_require__(186);
 
+class Action {
+  constructor() {
+    this.projectFile = core.getInput("PROJECT_FILE_PATH");
+    this.packageName = core.getInput("PACKAGE_NAME");
+    this.versionFile = core.getInput("VERSION_FILE_PATH") || this.projectFile;
+    this.versionRegex = new RegExp(core.getInput("VERSION_REGEX"), "m");
+    this.version = core.getInput("VERSION_STATIC");
+    this.tagCommit = core.getBooleanInput("TAG_COMMIT");
+    this.tagFormat = core.getInput("TAG_FORMAT");
+    this.nugetKey = core.getInput("NUGET_KEY");
+    this.nugetSource = core.getInput("NUGET_SOURCE");
+    this.includeSymbols = core.getBooleanInput("INCLUDE_SYMBOLS");
+    this.errorContinue = core.getBooleanInput("ERROR_CONTINUE");
+    this.noBuild = core.getBooleanInput("NO_BUILD");
+    this.signingCert = core.getInput("SIGNING_CERT_FILE_NAME");
+  }
 
-// most @actions toolkit packages have async methods
-async function run() {
-  try {
-    const ms = core.getInput('milliseconds');
-    core.info(`Waiting ${ms} milliseconds ...`);
+  _validateInputs() {
+    // make sure we don't have badly configured version flags
+    let errorMessage = [];
 
-    core.debug((new Date()).toTimeString()); // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
-    await wait(parseInt(ms));
-    core.info((new Date()).toTimeString());
+    if (!this.projectFile || !fs.existsSync(this.projectFile)) errorMessage.push(`Project file '${this.projectFile}' not found`);
 
-    core.setOutput('time', new Date().toTimeString());
-  } catch (error) {
-    core.setFailed(error.message);
+    if (!this.nugetKey) errorMessage.push(`You must setup the token 'NUGET_KEY'.`);
+
+    if (this.version && this.versionFile) core.warning("You provided 'version', extract-* keys are being ignored.");
+    if (this.signingCert && !fs.existsSync(this.signingCert)) errorMessage.push(`Must setup correct 'SIGNING_CERT_FILE_NAME', signing file '${this.signingCert}' not found`);
+    if (!this.version) {
+      if (!this.versionFile || !fs.existsSync(this.versionFile)) {
+        errorMessage.push(`Must setup correct 'VERSION_FILE_PATH' when not set 'VERSION_STATIC', version file '${this.versionFile}' not found`);
+      } else if (!this.versionRegex) {
+        errorMessage.push(`Must setup correct RegExp to 'VERSION_REGEX, current is '${core.getInput("VERSION_REGEX")}'`);
+      }
+      const versionFileContent = fs.readFileSync(this.versionFile, { encoding: "utf-8" }),
+        parsedVersion = this.versionRegex.exec(versionFileContent);
+
+      if (!parsedVersion || parsedVersion.length == 1) {
+        errorMessage.push(`Unable to extract version info! Regex:'${core.getInput("VERSION_REGEX")}', Version File:'${this.versionFile}'`);
+      } else {
+        this.version = parsedVersion[1];
+      }
+    }
+    if (errorMessage.length > 0) {
+      errorMessage.forEach((er) => {
+        core.error(er);
+      });
+      this._printErrorAndExit("quit due to errors above.");
+    }
+  }
+
+  _printErrorAndExit(msg) {
+    core.error(`😭 ${msg}`);
+    throw new Error(msg);
+  }
+
+  _printError(msg) {
+    if (this.errorContinue) {
+      core.warning(`😢 ${msg}`);
+    } else {
+      core.error(`😭 ${msg}`);
+      throw new Error(msg);
+    }
+  }
+
+  _executeCommand(cmd, options) {
+    core.info(`executing: [${cmd}]`);
+
+    const INPUT = cmd.split(" "),
+      TOOL = INPUT[0],
+      ARGS = INPUT.slice(1);
+    return spawnSync(TOOL, ARGS, options);
+  }
+
+  _executeInProcess(cmd) {
+    this._executeCommand(cmd, { encoding: "utf-8", stdio: [process.stdin, process.stdout, process.stderr] });
+  }
+
+  _tagCommit(version) {
+    const TAG = this.tagFormat.replace("*", version);
+
+    core.info(`✨ creating new tag ${TAG}`);
+
+    this._executeInProcess(`git tag ${TAG}`);
+    this._executeInProcess(`git push origin ${TAG}`);
+
+    process.stdout.write(`::set-output name=VERSION::${TAG}` + os.EOL);
+  }
+
+  _generatePackArgs() {
+    var args = `--no-build -c Release -p:PackageVersion=${this.version} ${this.includeSymbols ? "--include-symbols -p:SymbolPackageFormat=snupkg" : ""} --no-build -c Release`;
+
+    return args;
+  }
+  _pushPackage(version, name) {
+    core.info(`✨ found new version (${version}) of ${name}`);
+
+    // if (this.sourceType == 'NuGet' && !this.nugetKey) {
+    //   core.warning('😢 NUGET_KEY not given')
+    //   return
+    // }
+
+    core.info(`NuGet Source: ${this.nugetSource}`);
+
+    fs.readdirSync(".")
+      .filter((fn) => /\.s?nupkg$/.test(fn))
+      .forEach((fn) => fs.unlinkSync(fn));
+
+    if (!this.noBuild) this._executeInProcess(`dotnet build -c Release ${this.projectFile} /p:Version=${this.version}`);
+
+    this._executeInProcess(`dotnet pack ${this._generatePackArgs()} ${this.projectFile} -o .`);
+
+    const packages = fs.readdirSync(".").filter((fn) => fn.endsWith("nupkg"));
+    core.info(`Generated Package(s): ${packages.join(", ")}`);
+
+    packages
+      .filter((p) => p.endsWith(".nupkg"))
+      .forEach((nupkg) => {
+        if (this.signingCert) this._executeInProcess(`dotnet nuget sign ${nupkg} -CertificatePath ${this.signingCert} -Timestamper http://timestamp.digicert.com`);
+
+        const pushCmd = `dotnet nuget push ${nupkg} -s ${this.nugetSource}/v3/index.json -k ${this.nugetKey} --skip-duplicate${!this.includeSymbols ? " -n" : ""}`,
+          pushOutput = this._executeCommand(pushCmd, { encoding: "utf-8" }).stdout;
+        core.info(pushOutput);
+
+        if (/error/.test(pushOutput)) this._printErrorAndExit(`${/error.*/.exec(pushOutput)[0]}`);
+
+        const symbolsFilename = nupkg.replace(".nupkg", ".snupkg"),
+          fullpathsymbolsFilename = path.resolve(symbolsFilename);
+
+        process.stdout.write(`::set-output name=PACKAGE_NAME::${nupkg}` + os.EOL);
+        process.stdout.write(`::set-output name=PACKAGE_PATH::${path.resolve(nupkg)}` + os.EOL);
+
+        if (symbolsFilename) {
+          if (fs.existsSync(fullpathsymbolsFilename)) {
+            process.stdout.write(`::set-output name=SYMBOLS_PACKAGE_NAME::${symbolsFilename}` + os.EOL);
+            process.stdout.write(`::set-output name=SYMBOLS_PACKAGE_PATH::${fullpathsymbolsFilename}` + os.EOL);
+          } else {
+            core.warning(`supkg [${symbolsFilename}] is not existed. path:[${fullpathsymbolsFilename}]`);
+          }
+        }
+      });
+
+    if (this.tagCommit) this._tagCommit(version);
+  }
+
+  _checkForUpdate() {
+    if (!this.packageName) {
+      this.packageName = path.basename(this.projectFile).split(".").slice(0, -1).join(".");
+    }
+
+    core.info(`Package Name: ${this.packageName}`);
+
+    let versionCheckUrl, options;
+    // toLowerCase() for url  is resoving a bug of nuget
+    versionCheckUrl = `${this.nugetSource}/v3-flatcontainer/${this.packageName}/index.json`.toLowerCase();
+    options = {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36 Edg/100.0.1185.44",
+      },
+    };
+
+    core.info(`Url of checking Version: ${versionCheckUrl}`);
+
+    https
+      .get(versionCheckUrl, options, (res) => {
+        let body = "";
+        if (res.statusCode == 200) {
+          res.setEncoding("utf8");
+          res.on("data", (chunk) => (body += chunk));
+          res.on("end", () => {
+            const existingVersions = JSON.parse(body);
+            if (existingVersions.versions.indexOf(this.version) < 0) {
+              // core.info(`Current version ${this.version} is not found in NuGet. Versions:${existingVersions.versions}`)
+              this._pushPackage(this.version, this.packageName);
+            } else core.warning(`Stop pulishing, found the version on: ${this.nugetSource.replace("api.", "")}/packages/${this.packageName}/${this.version}`);
+          });
+        } else if (res.statusCode == 404) {
+          core.warning(`Url '${versionCheckUrl}' is not available now or '${this.packageName}' was never uploaded on NuGet`);
+          this._pushPackage(this.version, this.packageName);
+        } else {
+          this._printErrorAndExit(`error: ${res.statusCode}: ${res.statusMessage}`);
+        }
+      })
+      .on("error", (e) => {
+        this._printErrorAndExit(`error: ${e.message}`);
+      });
+  }
+
+  run() {
+    this._validateInputs();
+
+    core.info(`Version: ${this.version}`);
+
+    this._checkForUpdate();
   }
 }
 
-run();
+new Action().run();
 
 })();
 

@@ -1,116 +1,111 @@
-# Create a JavaScript Action
+# ✨ Publish NuGet
 
-<p align="center">
-  <a href="https://github.com/actions/javascript-action/actions"><img alt="javscript-action status" src="https://github.com/actions/javascript-action/workflows/units-test/badge.svg"></a>
-</p>
-
-Use this template to bootstrap the creation of a JavaScript action.:rocket:
-
-This template includes tests, linting, a validation workflow, publishing, and versioning guidance.
-
-If you are new, there's also a simpler introduction.  See the [Hello World JavaScript Action](https://github.com/actions/hello-world-javascript-action)
-
-## Create an action from this template
-
-Click the `Use this Template` and provide the new repo details for your action
-
-## Code in Main
-
-Install the dependencies
-
-```bash
-npm install
-```
-
-Run the tests :heavy_check_mark:
-
-```bash
-$ npm test
-
- PASS  ./index.test.js
-  ✓ throws invalid number (3ms)
-  ✓ wait 500 ms (504ms)
-  ✓ test runs (95ms)
-...
-```
-
-## Change action.yml
-
-The action.yml defines the inputs and output for your action.
-
-Update the action.yml with your name, description, inputs and outputs for your action.
-
-See the [documentation](https://help.github.com/en/articles/metadata-syntax-for-github-actions)
-
-## Change the Code
-
-Most toolkit and CI/CD operations involve async operations so the action is run in an async function.
-
-```javascript
-const core = require('@actions/core');
-...
-
-async function run() {
-  try {
-      ...
-  }
-  catch (error) {
-    core.setFailed(error.message);
-  }
-}
-
-run()
-```
-
-See the [toolkit documentation](https://github.com/actions/toolkit/blob/master/README.md#packages) for the various packages.
-
-## Package for distribution
-
-GitHub Actions will run the entry point from the action.yml. Packaging assembles the code into one file that can be checked in to Git, enabling fast and reliable execution and preventing the need to check in node_modules.
-
-Actions are run from GitHub repos.  Packaging the action will create a packaged action in the dist folder.
-
-Run prepare
-
-```bash
-npm run prepare
-```
-
-Since the packaged index.js is run from the dist folder.
-
-```bash
-git add dist
-```
-
-## Create a release branch
-
-Users shouldn't consume the action from master since that would be latest code and actions can break compatibility between major versions.
-
-Checkin to the v1 release branch
-
-```bash
-git checkout -b v1
-git commit -a -m "v1 release"
-```
-
-```bash
-git push origin v1
-```
-
-Note: We recommend using the `--license` option for ncc, which will create a license file for all of the production node modules used in your project.
-
-Your action is now published! :rocket:
-
-See the [versioning documentation](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
+GitHub action to build, pack & publish nuget packages automatically when a project version is updated
 
 ## Usage
 
-You can now consume the action by referencing the v1 branch
+Create new `.github/workflows/publish.yml` file:
 
-```yaml
-uses: actions/javascript-action@v1
-with:
-  milliseconds: 1000
+```yml
+name: publish to nuget
+on:
+  push:
+    branches:
+      - master # Default release branch
+jobs:
+  publish:
+    name: build, pack & publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # - name: Setup dotnet
+      #   uses: actions/setup-dotnet@v1
+      #   with:
+      #     dotnet-version: 6.0.0
+
+      # Publish
+      - name: Build Projects and Publish on Version Change
+        id: publish_nuget_xx
+        uses: niubilitytools/publish-to-nuget.org@v0.1
+        with:
+          # Filepath of the project to be packaged, relative to root of repository
+          PROJECT_FILE_PATH: Core/Core.csproj
+
+          # NuGet package id, used for version detection & defaults to project name
+          # PACKAGE_NAME: Core
+
+          # Useful with external providers like Nerdbank.GitVersioning, ignores
+          #     `VERSION_FILE_PATH` & `VERSION_REGEX`
+          # VERSION_STATIC: 1.0.0
+
+          # Filepath with version info, relative to root of repository &
+          #     defaults to `PROJECT_FILE_PATH`
+          # VERSION_FILE_PATH: Directory.Build.props
+
+          # Regex pattern to extract version info in a capturing group
+          # VERSION_REGEX: ^\s*<Version>(.*)<\/Version>\s*$
+
+          # Flag to toggle git tagging, enabled by default
+          # TAG_COMMIT: true
+
+          # Format of the git tag, [*] gets replaced with actual version
+          # TAG_FORMAT: v*
+
+          # API key to authenticate with NuGet server
+          NUGET_KEY: ${{secrets.NUGET_API_KEY}}
+
+          #  NuGet server uri hosting the packages, defaults to https://api.nuget.org
+          # NUGET_SOURCE: https://api.nuget.org
+
+          # Flag to toggle pushing symbols along with nuget package to the server,
+          #     disabled by default
+          # INCLUDE_SYMBOLS: false
+
+          # Flag to set continue the next task when some error happened
+          # INCLUDE_SYMBOLS: false
+          # Certificate file name (should be in root folder) to sign the package before upload
+          # SIGNING_CERT_FILE_NAME: Core.cer
+ 
 ```
 
-See the [actions tab](https://github.com/actions/javascript-action/actions) for runs of this action! :rocket:
+- Project gets published only if there's a `NUGET_KEY` configured in the repository
+
+## Inputs
+
+Input | Default Value | Description
+--- | --- | ---
+PROJECT_FILE_PATH | | Filepath of the project to be packaged, relative to root of repository
+PACKAGE_NAME | | NuGet package id, used for version detection & defaults to project name
+VERSION_STATIC| | Useful with external providers like Nerdbank.GitVersioning, ignores `VERSION_FILE_PATH` & `VERSION_REGEX`
+VERSION_FILE_PATH | `[PROJECT_FILE_PATH]` | Filepath with version info, relative to root of repository & defaults to PROJECT_FILE_PATH
+VERSION_REGEX | `^\s*<Version>(.*)<\/Version>\s*$` | Regex pattern to extract version info in a capturing group
+TAG_COMMIT | `true` | Flag to toggle git tagging, enabled by default
+TAG_FORMAT | `v*` | Format of the git tag, `[*]` gets replaced with actual version
+NUGET_KEY | | API key to authenticate with NuGet server
+NUGET_SOURCE | `https://api.nuget.org` | NuGet server uri hosting the packages, defaults to <https://api.nuget.org>
+INCLUDE_SYMBOLS | `false` | Flag to toggle pushing symbols along with nuget package to the server, disabled by default
+INCLUDE_SYMBOLS  | `false` | Flag to set continue the next task when some error happened
+SIGNING_CERT_FILE_NAME||Certificate file name (should be in root folder) to sign the package before upload
+**FYI:**
+
+- `NUGET_SOURCE` must support `/v3-flatcontainer/PACKAGE_NAME/index.json` for version change detection to work
+- Multiple projects can make use of steps to configure each project individually, common inputs between steps can be given as `env` for [job / workflow](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#env)
+
+## Outputs
+
+Output | Description
+--- | ---
+version | Version of the associated git tag
+PACKAGE_NAME | Name of the NuGet package generated
+package-path | Path to the generated NuGet package
+symbols-PACKAGE_NAME | Name of the symbols package generated
+symbols-package-path | Path to the generated symbols package
+
+**FYI:**
+
+- Outputs may or may not be set depending on the action inputs or if the action failed
+
+## License
+
+[MIT](LICENSE)
