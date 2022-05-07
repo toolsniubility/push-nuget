@@ -38,7 +38,7 @@ inputs:
     TAG_COMMIT:
         description: Flag to toggle git tagging, enabled by default
         required: false
-        default: 'true'
+        default: true
     TAG_FORMAT:
         description: Format of the git tag, [*] gets replaced with actual version
         required: false
@@ -53,15 +53,15 @@ inputs:
     INCLUDE_SYMBOLS:
         description: Flag to toggle pushing symbols along with nuget package to the server, disabled by default
         required: false
-        default: 'false'
+        default: false
     ERROR_CONTINUE:
         description: Flag to set continue the next task when some error happened
         required: false
-        default: 'false'
+        default: false
     NO_BUILD:
         description: Flag to toggle building the project before pack, disabled by default
         required: false
-        default: 'false'
+        default: false
     SIGNING_CERT_FILE_NAME:
         description: Certificate file name (should be in root folder) to sign the package before upload
         required: false
