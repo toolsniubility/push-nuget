@@ -7,19 +7,19 @@ const os = require("os"),
 
 class Action {
   constructor() {
-    this.projectFile = core.getInput("PROJECT_FILE_PATH");
-    this.packageName = core.getInput("PACKAGE_NAME");
-    this.versionFile = core.getInput("VERSION_FILE_PATH") || this.projectFile;
-    this.versionRegex = new RegExp(core.getInput("VERSION_REGEX"), "m");
-    this.version = core.getInput("VERSION_STATIC");
-    this.tagCommit = core.getBooleanInput("TAG_COMMIT");
-    this.tagFormat = core.getInput("TAG_FORMAT");
-    this.nugetKey = core.getInput("NUGET_KEY");
-    this.nugetSource = core.getInput("NUGET_SOURCE");
-    this.includeSymbols = core.getBooleanInput("INCLUDE_SYMBOLS");
-    this.errorContinue = core.getBooleanInput("ERROR_CONTINUE");
-    this.noBuild = core.getBooleanInput("NO_BUILD");
-    this.signingCert = core.getInput("SIGNING_CERT_FILE_NAME");
+    this.projectFile = core.getInput('project_file_path')
+    this.packageName = core.getInput('package_name')
+    this.versionFile = core.getInput('version_file_path') || this.projectFile
+    this.versionRegex = new RegExp(core.getInput('version_regex'), 'm')
+    this.version = core.getInput('version_static')
+    this.tagCommit = core.getBooleanInput('tag_commit')
+    this.tagFormat = core.getInput('tag_format')
+    this.nugetKey = core.getInput('nuget_key')
+    this.nugetSource = core.getInput("nuget_source");
+    this.includeSymbols = core.getBooleanInput("include_symbols");
+    this.errorContinue = core.getBooleanInput("error_continue");
+    this.noBuild = core.getBooleanInput("no_build");
+    this.signingCert = core.getInput("signing_cert_file_name");
   }
 
   _validateInputs() {
@@ -28,23 +28,23 @@ class Action {
 
     if (!this.projectFile || !fs.existsSync(this.projectFile)) errorMessage.push(`Project file '${this.projectFile}' not found`);
 
-    if (!this.nugetKey) errorMessage.push(`You must setup the token 'NUGET_KEY'.`);
+    if (!this.nugetKey) errorMessage.push(`You must setup the token 'nuget_key'.`)
 
-    if (this.version && this.versionFile) core.warning("You provided 'version', extract-* keys are being ignored.");
-    if (this.signingCert && !fs.existsSync(this.signingCert)) errorMessage.push(`Must setup correct 'SIGNING_CERT_FILE_NAME', signing file '${this.signingCert}' not found`);
+    if (this.version && this.versionFile) core.warning("You provided 'version', extract-* keys are being ignored.")
+    if (this.signingCert && !fs.existsSync(this.signingCert)) errorMessage.push(`Must setup correct 'signing_cert_file_name', signing file '${this.signingCert}' not found`)
     if (!this.version) {
       if (!this.versionFile || !fs.existsSync(this.versionFile)) {
-        errorMessage.push(`Must setup correct 'VERSION_FILE_PATH' when not set 'VERSION_STATIC', version file '${this.versionFile}' not found`);
+        errorMessage.push(`Must setup correct 'version_static' when not set 'version_static', version file '${this.versionFile}' not found`)
       } else if (!this.versionRegex) {
-        errorMessage.push(`Must setup correct RegExp to 'VERSION_REGEX, current is '${core.getInput("VERSION_REGEX")}'`);
+        errorMessage.push(`Must setup correct RegExp to 'version_regex, current is '${core.getInput('version_regex')}'`)
       }
-      const versionFileContent = fs.readFileSync(this.versionFile, { encoding: "utf-8" }),
-        parsedVersion = this.versionRegex.exec(versionFileContent);
+      const versionFileContent = fs.readFileSync(this.versionFile, { encoding: 'utf-8' }),
+        parsedVersion = this.versionRegex.exec(versionFileContent)
 
       if (!parsedVersion || parsedVersion.length == 1) {
-        errorMessage.push(`Unable to extract version info! Regex:'${core.getInput("VERSION_REGEX")}', Version File:'${this.versionFile}'`);
+        errorMessage.push(`Unable to extract version info! Regex:'${core.getInput('version_regex')}', Version File:'${this.versionFile}'`)
       } else {
-        this.version = parsedVersion[1];
+        this.version = parsedVersion[1]
       }
     }
     if (errorMessage.length > 0) {
@@ -55,7 +55,7 @@ class Action {
     }
   }
 
-  _printErrorAndExit(msg) {
+  _printErrorAndExit(msg) { 
     core.error(`😭 ${msg}`);
     throw new Error(msg);
   }
@@ -99,54 +99,54 @@ class Action {
     return args;
   }
   _pushPackage(version, name) {
-    core.info(`✨ found new version (${version}) of ${name}`);
+    core.info(`✨ found new version (${version}) of ${name}`)
 
     // if (this.sourceType == 'NuGet' && !this.nugetKey) {
-    //   core.warning('😢 NUGET_KEY not given')
+    //   core.warning('😢 nuget_key not given')
     //   return
     // }
 
-    core.info(`NuGet Source: ${this.nugetSource}`);
+    core.info(`NuGet Source: ${this.nugetSource}`)
 
-    fs.readdirSync(".")
+    fs.readdirSync('.')
       .filter((fn) => /\.s?nupkg$/.test(fn))
-      .forEach((fn) => fs.unlinkSync(fn));
+      .forEach((fn) => fs.unlinkSync(fn))
 
-    if (!this.noBuild) this._executeInProcess(`dotnet build -c Release ${this.projectFile} /p:Version=${this.version}`);
+    if (!this.noBuild) this._executeInProcess(`dotnet build -c Release ${this.projectFile} /p:Version=${this.version}`)
 
-    this._executeInProcess(`dotnet pack ${this._generatePackArgs()} ${this.projectFile} -o .`);
+    this._executeInProcess(`dotnet pack ${this._generatePackArgs()} ${this.projectFile} -o .`)
 
-    const packages = fs.readdirSync(".").filter((fn) => fn.endsWith("nupkg"));
-    core.info(`Generated Package(s): ${packages.join(", ")}`);
+    const packages = fs.readdirSync('.').filter((fn) => fn.endsWith('nupkg'))
+    core.info(`Generated Package(s): ${packages.join(', ')}`)
 
     packages
-      .filter((p) => p.endsWith(".nupkg"))
+      .filter((p) => p.endsWith('.nupkg'))
       .forEach((nupkg) => {
-        if (this.signingCert) this._executeInProcess(`dotnet nuget sign ${nupkg} -CertificatePath ${this.signingCert} -Timestamper http://timestamp.digicert.com`);
+        if (this.signingCert) this._executeInProcess(`dotnet nuget sign ${nupkg} -CertificatePath ${this.signingCert} -Timestamper http://timestamp.digicert.com`)
 
-        const pushCmd = `dotnet nuget push ${nupkg} -s ${this.nugetSource}/v3/index.json -k ${this.nugetKey} --skip-duplicate${!this.includeSymbols ? " -n" : ""}`,
-          pushOutput = this._executeCommand(pushCmd, { encoding: "utf-8" }).stdout;
-        core.info(pushOutput);
+        const pushCmd = `dotnet nuget push ${nupkg} -s ${this.nugetSource}/v3/index.json -k ${this.nugetKey} --skip-duplicate${!this.includeSymbols ? ' -n' : ''}`,
+          pushOutput = this._executeCommand(pushCmd, { encoding: 'utf-8' }).stdout
+        core.info(pushOutput)
 
-        if (/error/.test(pushOutput)) this._printErrorAndExit(`${/error.*/.exec(pushOutput)[0]}`);
+        if (/error/.test(pushOutput)) this._printErrorAndExit(`${/error.*/.exec(pushOutput)[0]}`)
 
-        const symbolsFilename = nupkg.replace(".nupkg", ".snupkg"),
-          fullpathsymbolsFilename = path.resolve(symbolsFilename);
+        const symbolsFilename = nupkg.replace('.nupkg', '.snupkg'),
+          fullpathsymbolsFilename = path.resolve(symbolsFilename)
 
-        process.stdout.write(`::set-output name=PACKAGE_NAME::${nupkg}` + os.EOL);
-        process.stdout.write(`::set-output name=PACKAGE_PATH::${path.resolve(nupkg)}` + os.EOL);
+        process.stdout.write(`::set-output name=PACKAGE_NAME::${nupkg}` + os.EOL)
+        process.stdout.write(`::set-output name=PACKAGE_PATH::${path.resolve(nupkg)}` + os.EOL)
 
         if (symbolsFilename) {
           if (fs.existsSync(fullpathsymbolsFilename)) {
-            process.stdout.write(`::set-output name=SYMBOLS_PACKAGE_NAME::${symbolsFilename}` + os.EOL);
-            process.stdout.write(`::set-output name=SYMBOLS_PACKAGE_PATH::${fullpathsymbolsFilename}` + os.EOL);
+            process.stdout.write(`::set-output name=SYMBOLS_PACKAGE_NAME::${symbolsFilename}` + os.EOL)
+            process.stdout.write(`::set-output name=SYMBOLS_PACKAGE_PATH::${fullpathsymbolsFilename}` + os.EOL)
           } else {
-            core.warning(`supkg [${symbolsFilename}] is not existed. path:[${fullpathsymbolsFilename}]`);
+            core.warning(`supkg [${symbolsFilename}] is not existed. path:[${fullpathsymbolsFilename}]`)
           }
         }
-      });
+      })
 
-    if (this.tagCommit) this._tagCommit(version);
+    if (this.tagCommit) this._tagCommit(version)
   }
 
   _checkForUpdate() {
