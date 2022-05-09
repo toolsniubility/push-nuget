@@ -27,7 +27,7 @@ jobs:
       # Publish
       - name: Build Projects and Publish on Version Change
         id: publish_nuget_xx
-        uses: niubilitytools/publish-to-nuget.org@v0.1
+        uses: niubilitytools/push-nuget@v1
         with:
           # Filepath of the project to be packaged, relative to root of repository
           project_file_path: Core/Core.csproj
