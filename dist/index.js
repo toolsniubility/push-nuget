@@ -1995,17 +1995,17 @@ class Action {
   constructor() {
     this.projectFile = core.getInput('project_file_path')
     this.packageName = core.getInput('package_name')
-    this.versionFile = core.getInput('version_static') || this.projectFile
+    this.versionFile = core.getInput('version_file_path') || this.projectFile
     this.versionRegex = new RegExp(core.getInput('version_regex'), 'm')
     this.version = core.getInput('version_static')
     this.tagCommit = core.getBooleanInput('tag_commit')
     this.tagFormat = core.getInput('tag_format')
     this.nugetKey = core.getInput('nuget_key')
-    this.nugetSource = core.getInput('nuget_source')
-    this.includeSymbols = core.getBooleanInput('include_symbols')
-    this.errorContinue = core.getBooleanInput('error_continue')
-    this.noBuild = core.getBooleanInput('no_build')
-    this.signingCert = core.getInput('signing_cert_file_name')
+    this.nugetSource = core.getInput("nuget_source");
+    this.includeSymbols = core.getBooleanInput("include_symbols");
+    this.errorContinue = core.getBooleanInput("error_continue");
+    this.noBuild = core.getBooleanInput("no_build");
+    this.signingCert = core.getInput("signing_cert_file_name");
   }
 
   _validateInputs() {
@@ -2041,7 +2041,7 @@ class Action {
     }
   }
 
-  _printErrorAndExit(msg) {
+  _printErrorAndExit(msg) { 
     core.error(`😭 ${msg}`);
     throw new Error(msg);
   }
