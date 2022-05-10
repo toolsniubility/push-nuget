@@ -13,6 +13,11 @@ inputs:
     version_static:
         description: Filepath with version info, relative to root of repository & defaults to project_file_path
         required: false
+
+    version_file_path: 
+        description: Filepath with version info, relative to root of repository & defaults to `project_file_path`
+        required: false
+          
     version_regex:
         description: Regex pattern to extract version info in a capturing group
         required: false

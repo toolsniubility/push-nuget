@@ -41,7 +41,7 @@ jobs:
 
           # Filepath with version info, relative to root of repository &
           #     defaults to `project_file_path`
-          # version_static: Directory.Build.props
+          # version_file_path: Directory.Build.props
 
           # Regex pattern to extract version info in a capturing group
           # version_regex: ^\s*<Version>(.*)<\/Version>\s*$
