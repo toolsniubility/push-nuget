@@ -2080,7 +2080,7 @@ class Action {
   }
 
   _generatePackArgs() {
-    var args = `--no-build -c Release -p:PackageVersion=${this.version} ${this.includeSymbols ? "--include-symbols -p:SymbolPackageFormat=snupkg" : ""} --no-build -c Release`;
+    var args = `--no-build -c Release -p:PackageVersion=${this.version} ${this.includeSymbols ? '--include-symbols -p:SymbolPackageFormat=snupkg' : ''}`
 
     return args;
   }
@@ -2100,7 +2100,9 @@ class Action {
 
     if (!this.noBuild) this._executeInProcess(`dotnet build -c Release ${this.projectFile} /p:Version=${this.version}`)
 
-    this._executeInProcess(`dotnet pack ${this._generatePackArgs()} ${this.projectFile} -o .`)
+    this._executeInProcess(
+      `dotnet pack --no-build -c Release -p:PackageVersion=${this.version} ${this.includeSymbols ? '--include-symbols -p:SymbolPackageFormat=snupkg' : ''} ${this.projectFile} -o .`
+    )
 
     const packages = fs.readdirSync('.').filter((fn) => fn.endsWith('nupkg'))
     core.info(`Generated Package(s): ${packages.join(', ')}`)
@@ -2108,6 +2110,7 @@ class Action {
     packages
       .filter((p) => p.endsWith('.nupkg'))
       .forEach((nupkg) => {
+        core.info(`process the current package: ${nupkg}`)
         if (this.signingCert) this._executeInProcess(`dotnet nuget sign ${nupkg} -CertificatePath ${this.signingCert} -Timestamper http://timestamp.digicert.com`)
 
         const pushCmd = `dotnet nuget push ${nupkg} -s ${this.nugetSource}/v3/index.json -k ${this.nugetKey} --skip-duplicate${!this.includeSymbols ? ' -n' : ''}`,
