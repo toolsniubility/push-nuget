@@ -2120,17 +2120,17 @@ class Action {
         if (/error/.test(pushOutput)) this._printErrorAndExit(`${/error.*/.exec(pushOutput)[0]}`)
 
         const symbolsFilename = nupkg.replace('.nupkg', '.snupkg'),
-          fullpathsymbolsFilename = path.resolve(symbolsFilename)
+          fullPathSymbolsFilename = path.resolve(symbolsFilename)
 
         process.stdout.write(`::set-output name=PACKAGE_NAME::${nupkg}` + os.EOL)
         process.stdout.write(`::set-output name=PACKAGE_PATH::${path.resolve(nupkg)}` + os.EOL)
 
         if (symbolsFilename) {
-          if (fs.existsSync(fullpathsymbolsFilename)) {
+          if (fs.existsSync(fullPathSymbolsFilename)) {
             process.stdout.write(`::set-output name=SYMBOLS_PACKAGE_NAME::${symbolsFilename}` + os.EOL)
-            process.stdout.write(`::set-output name=SYMBOLS_PACKAGE_PATH::${fullpathsymbolsFilename}` + os.EOL)
+            process.stdout.write(`::set-output name=SYMBOLS_PACKAGE_PATH::${fullPathSymbolsFilename}` + os.EOL)
           } else {
-            core.warning(`supkg [${symbolsFilename}] is not existed. path:[${fullpathsymbolsFilename}]`)
+            core.warning(`supkg [${symbolsFilename}] is not existed. path:[${fullPathSymbolsFilename}]`)
           }
         }
       })
@@ -2140,45 +2140,45 @@ class Action {
 
   _checkForUpdate() {
     if (!this.packageName) {
-      this.packageName = path.basename(this.projectFile).split(".").slice(0, -1).join(".");
+      this.packageName = path.basename(this.projectFile).split('.').slice(0, -1).join('.')
     }
 
-    core.info(`Package Name: ${this.packageName}`);
+    core.info(`Package Name: ${this.packageName}`)
 
-    let versionCheckUrl, options;
-    // toLowerCase() for url  is resoving a bug of nuget
-    versionCheckUrl = `${this.nugetSource}/v3-flatcontainer/${this.packageName}/index.json`.toLowerCase();
+    let versionCheckUrl, options
+    // toLowerCase() for url  is resolving a bug of nuget
+    versionCheckUrl = `${this.nugetSource}/v3-flatContainer/${this.packageName}/index.json`.toLowerCase()
     options = {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36 Edg/100.0.1185.44",
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36 Edg/100.0.1185.44',
       },
-    };
+    }
 
-    core.info(`Url of checking Version: ${versionCheckUrl}`);
+    core.info(`Url of checking Version: ${versionCheckUrl}`)
 
     https
       .get(versionCheckUrl, options, (res) => {
-        let body = "";
+        let body = ''
         if (res.statusCode == 200) {
-          res.setEncoding("utf8");
-          res.on("data", (chunk) => (body += chunk));
-          res.on("end", () => {
-            const existingVersions = JSON.parse(body);
+          res.setEncoding('utf8')
+          res.on('data', (chunk) => (body += chunk))
+          res.on('end', () => {
+            const existingVersions = JSON.parse(body)
             if (existingVersions.versions.indexOf(this.version) < 0) {
               // core.info(`Current version ${this.version} is not found in NuGet. Versions:${existingVersions.versions}`)
-              this._pushPackage(this.version, this.packageName);
-            } else core.warning(`Stop pulishing, found the version on: ${this.nugetSource.replace("api.", "")}/packages/${this.packageName}/${this.version}`);
-          });
+              this._pushPackage(this.version, this.packageName)
+            } else core.warning(`Stop pushing, found the version on: ${this.nugetSource.replace('api.', '')}/packages/${this.packageName}/${this.version}`)
+          })
         } else if (res.statusCode == 404) {
-          core.warning(`Url '${versionCheckUrl}' is not available now or '${this.packageName}' was never uploaded on NuGet`);
-          this._pushPackage(this.version, this.packageName);
+          core.warning(`Url '${versionCheckUrl}' is not available now or '${this.packageName}' was never uploaded on NuGet`)
+          this._pushPackage(this.version, this.packageName)
         } else {
-          this._printErrorAndExit(`error: ${res.statusCode}: ${res.statusMessage}`);
+          this._printErrorAndExit(`error: ${res.statusCode}: ${res.statusMessage}`)
         }
       })
-      .on("error", (e) => {
-        this._printErrorAndExit(`error: ${e.message}`);
-      });
+      .on('error', (e) => {
+        this._printErrorAndExit(`error: ${e.message}`)
+      })
   }
 
   run() {
